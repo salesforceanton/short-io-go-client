@@ -18,7 +18,7 @@ const (
 	CONTENT_TYPE        = "application/json"
 	AUTH_HEADER         = "Authorization"
 	ACCEPT_HEADER       = "Accept"
-	CONTENT_TYPE_HEADER = "CONTENT_TYPE"
+	CONTENT_TYPE_HEADER = "Content-type"
 )
 
 type Client struct {
@@ -63,7 +63,6 @@ func (c *Client) ShortenLink(link string) (string, error) {
 
 	// Perform http callout and process result
 	res, err := c.client.Do(req)
-
 	if err != nil {
 		return "", err
 	}
@@ -77,7 +76,7 @@ func (c *Client) ShortenLink(link string) (string, error) {
 	}
 
 	// To make a clear result for this method return only shortened link without any other info
-	return result.SecureShortUrl, nil
+	return result.ShortURL, nil
 }
 
 func (c *Client) ShortenLinks(links []string) ([]ShortenLinkResponseItem, error) {
