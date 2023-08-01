@@ -33,7 +33,7 @@ func NewClient(timeout time.Duration) (*Client, error) {
 
 	cfg, err := config.New()
 	if err != nil {
-		return nil, errors.New("Error with config initialization")
+		return nil, errors.New(fmt.Sprintf("Error with config initialization: %s", err.Error()))
 	}
 
 	return &Client{
