@@ -1,11 +1,24 @@
 package shortener
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/salesforceanton/short-io-go-client/config"
+)
+
+const (
+	BASE_ENDPOINT       = "https://api.short.io"
+	LINKS_ENDPOINT      = "links"
+	CONTENT_TYPE        = "application/json"
+	AUTH_HEADER         = "Authorization"
+	ACCEPT_HEADER       = "Accept"
+	CONTENT_TYPE_HEADER = "CONTENT_TYPE"
 )
 
 type Client struct {
@@ -25,33 +38,78 @@ func NewClient(timeout time.Duration) (*Client, error) {
 
 	return &Client{
 		client: &http.Client{
-			Timeout: timeout,
-			// Add auth middleware
+			Timeout:   timeout,
+			Transport: NewAuthRoundTripper(cfg.Token),
 		},
 		config: cfg,
 	}, nil
 }
 
-func (c *Client) shortenLink(link string) (ShortenLinkResponseItem, error) {
-	// url := "https://api.short.io/links"
+func (c *Client) ShortenLink(link string) (string, error) {
+	// Prepare Http request
+	requestBody, err := json.Marshal(c.mapUrlToRequest(link))
+	if err != nil {
+		return "", errors.New("Request in incorrect type")
+	}
 
-	// payload := strings.NewReader("{\"domain\":\"ah0e.short.gy\",\"originalURL\":\"http://valeron.macron@gmail.com\"}")
+	req, _ := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("%s/%s", BASE_ENDPOINT, LINKS_ENDPOINT),
+		bytes.NewBuffer(requestBody),
+	)
 
-	// req, _ := http.NewRequest("POST", url, payload)
+	req.Header.Add(ACCEPT_HEADER, CONTENT_TYPE)
+	req.Header.Add(CONTENT_TYPE_HEADER, CONTENT_TYPE)
 
-	// req.Header.Add("accept", "application/json")
-	// req.Header.Add("content-type", "application/json")
-	// req.Header.Add("Authorization", "sk_ipjnYDD1sMoF9rkj")
+	// Perform http callout and process result
+	res, err := c.client.Do(req)
 
-	// res, _ := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
 
-	// defer res.Body.Close()
-	// body, _ := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
 
-	// fmt.Println(string(body))
+	var result ShortenLinkResponseItem
+	if err = json.Unmarshal(body, &result); err != nil {
+		return "", errors.New("Error with parsing response body")
+	}
 
+	// To make a clear result for this method return only shortened link without any other info
+	return result.SecureShortUrl, nil
 }
 
-func (c *Client) shortenLinks(links []string) ([]ShortenLinkResponseItem, error) {
+func (c *Client) ShortenLinks(links []string) ([]ShortenLinkResponseItem, error) {
+	// Prepare Http request
+	requestBody, err := json.Marshal(c.mapUrlsToBulkRequest(links))
+	if err != nil {
+		return nil, errors.New("Request in incorrect type")
+	}
 
+	req, _ := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("%s/%s", BASE_ENDPOINT, LINKS_ENDPOINT),
+		bytes.NewBuffer(requestBody),
+	)
+
+	req.Header.Add(ACCEPT_HEADER, CONTENT_TYPE)
+	req.Header.Add(CONTENT_TYPE_HEADER, CONTENT_TYPE)
+
+	// Perform http callout and process result
+	res, err := c.client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	var result []ShortenLinkResponseItem
+	if err = json.Unmarshal(body, &result); err != nil {
+		return nil, errors.New("Error with parsing response body")
+	}
+
+	return result, nil
 }
