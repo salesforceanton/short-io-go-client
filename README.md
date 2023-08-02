@@ -1,4 +1,3 @@
-# short-io-go-client
 # Http client package to interract with [short.io api]([https://h.com/](https://developers.short.io/reference/apilinksget))
 
 ### Implemented functions:
